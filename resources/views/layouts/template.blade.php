@@ -11,6 +11,8 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback">
   <!-- Font Awesome -->
   <link rel="stylesheet" href="{{ url('adminlte/plugins/fontawesome-free/css/all.min.css') }}">
+  {{-- SweetAlert --}}
+  <link rel="stylesheet" href="{{url ('adminlte/plugins/sweetalert2-theme-bootstrap-4/bootstrap-4.min.css')}}">
   <!-- DataTables -->
   <link rel="stylesheet" href="{{ url('adminlte/plugins/datatables-bs4/css/dataTables.bootstrap4.min.css') }}">
   <link rel="stylesheet" href="{{ url('adminlte/plugins/datatables-responsive/css/responsive.bootstrap4.min.css') }}">
@@ -69,7 +71,11 @@
 <script src="{{ url('adminlte/plugins/jquery/jquery.min.js') }}"></script>
 <!-- Bootstrap 4 -->
 <script src="{{ url('adminlte/plugins/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
-
+<!-- jquery-validation -->
+<script src="{{ url('adminlte/plugins/jquery-validation/jquery.validate.min.js')}}"></script>
+<script src="{{ url('adminlte/plugins/jquery-validation/additional-method.min.js')}}"></script>
+{{-- sweetalert 2 --}}
+<script src="{{ url('adminlte/plugins/sweetalert2/sweetalert2.min.js')}}"></script>
 <!-- DataTables & Plugins -->
 <script src="{{ url('adminlte/plugins/datatables/jquery.dataTables.min.js') }}"></script>
 <script src="{{ url('adminlte/plugins/datatables-bs4/js/dataTables.bootstrap4.min.js') }}"></script>

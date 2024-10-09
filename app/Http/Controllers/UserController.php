@@ -7,6 +7,7 @@ use App\Models\LevelModel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Symfony\Contracts\Service\Attribute\Required;
+use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
 class UserController extends Controller
@@ -166,6 +167,43 @@ class UserController extends Controller
             //jika terjadi error ketika menghapus data, redirect kembali ke halaman dengan membwa pesan error
             return redirect('/user') -> with('error', 'Data user gagal dihapus karena masih terdapat tabel lain yang terkait dengan data ini');
         }
+    }
+
+    public function create_ajax()
+    {
+        $level = LevelModel::select('level_id', 'level_nama')->get();
+
+        return view('user.create_ajax')
+                    ->with('level', $level);
+    }
+
+    public function store_ajax(Request $request){
+        //periksa bila request berupa AJAX atau tidak
+        if($request->ajax() || $request->wantsJson()){
+            $rules = [
+                'level_id'  => 'required|integer',
+                'username'  => 'required|string|min:3|unique:m_user,username',
+                'nama'      => 'required|string|max:100',
+                'password'  => 'required|min:6'
+            ];
+
+            $validator = Validator::make($request->all(), $rules);
+
+            if($validator->fails()){
+                return response()->json([
+                    'status'    =>false,    //response status, false: eror/gagal, true:berhasil
+                    'message'   => 'Validasi Gagal',
+                    'msgField'  => $validator->errors(),    //pesan eror validasi
+                ]);
+            }
+
+            UserModel::create($request->all());
+            return response()->json([
+                'status'    => true,
+                'message'   => 'Data user berhasil disimpan'
+            ]);
+        }
+        redirect('/');
     }
     // public function index () {
     //     $user = UserModel::with('level') -> get ();
