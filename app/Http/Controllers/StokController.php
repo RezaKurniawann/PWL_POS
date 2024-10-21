@@ -189,79 +189,121 @@ class StokController extends Controller
     }
 
     public function import_ajax(Request $request)
-    {
-        if($request->ajax() || $request->wantsJson()){
-            // Validasi file harus berformat xlsx dan maksimal ukuran 1MB
-            $rules = [
-                'file_stok' => ['required', 'mimes:xlsx', 'max:1024']
-            ];
-            $validator = Validator::make($request->all(), $rules);
-            
-            if($validator->fails()){
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Validasi Gagal',
-                    'msgField' => $validator->errors()
-                ]);
-            }
+{
+    if ($request->ajax() || $request->wantsJson()) {
+        // Validasi file harus berformat xlsx dan maksimal ukuran 1MB
+        $rules = [
+            'file_stok' => ['required', 'mimes:xlsx', 'max:1024']
+        ];
+        $validator = Validator::make($request->all(), $rules);
 
-            try {
-                // Ambil file dari request
-                $file = $request->file('file_stok'); 
-                $reader = IOFactory::createReader('Xlsx'); // Load reader file Excel
-                $reader->setReadDataOnly(true); // Hanya membaca data
-                $spreadsheet = $reader->load($file->getRealPath()); // Load file excel
-                $sheet = $spreadsheet->getActiveSheet(); // Ambil sheet yang aktif
-                $data = $sheet->toArray(null, false, true, true); // Ambil data Excel
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validasi Gagal',
+                'msgField' => $validator->errors()
+            ]);
+        }
 
-                // Siapkan array untuk menampung data yang akan diinsert
-                $insert = [];
-                
-                if(count($data) > 1){ // Jika data lebih dari 1 baris
-                    foreach ($data as $baris => $value) {
-                        if($baris > 1){ // Baris ke-1 adalah header, maka lewati
-                            // Pastikan semua kolom tidak kosong sebelum insert
-                            if ($value['A'] && $value['B'] && $value['C'] && $value['D'] && $value['E'] && $value['F']) {
-                                $insert[] = [
-                                    'stok_id' => $value['A'],
-                                    'supplier_id' => $value['B'],
-                                    'barang_id' => $value['C'],
-                                    'user_id' => $value['D'],
-                                    'stok_tanggal' => Carbon::createFromFormat('d/m/Y H:i', $value['E'])->format('Y-m-d H:i:s'),
-                                    'stok_jumlah' => $value['F'],
-                                    'created_at' => now(),
-                                ];
+        try {
+            // Ambil file dari request
+            $file = $request->file('file_stok');
+            $reader = IOFactory::createReader('Xlsx'); // Load reader file Excel
+            $reader->setReadDataOnly(true); // Hanya membaca data
+            $spreadsheet = $reader->load($file->getRealPath()); // Load file excel
+            $sheet = $spreadsheet->getActiveSheet(); // Ambil sheet yang aktif
+            $data = $sheet->toArray(null, false, true, true); // Ambil data Excel
+
+            // Siapkan array untuk menampung data yang akan diinsert
+            $insert = [];
+
+            if (count($data) > 1) { // Jika data lebih dari 1 baris
+                foreach ($data as $baris => $value) {
+                    if ($baris > 1) { // Lewati header
+                        if ($value['A'] && $value['B'] && $value['C'] && $value['D'] && $value['E'] && $value['F']) {
+                            // Konversi tanggal ke format yang sesuai
+                            try {
+                                if (is_numeric($value['E'])) {
+                                    // Jika data adalah angka, konversi dengan metode Excel
+                                    $stok_tanggal = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($value['E']);
+                                    $stok_tanggal = $stok_tanggal->format('Y-m-d H:i:s');
+                                } else {
+                                    // Jika data adalah string, coba konversi dengan format yang ditentukan
+                                    $stok_tanggal = \Carbon\Carbon::createFromFormat('d/m/Y H:i:s', $value['E'])->format('Y-m-d H:i:s');
+                                }
+                            } catch (\Exception $e) {
+                                return response()->json([
+                                    'status' => false,
+                                    'message' => 'Format tanggal tidak valid: ' . $e->getMessage()
+                                ]);
                             }
+
+                            $insert[] = [
+                                'stok_id' => $value['A'],
+                                'supplier_id' => $value['B'],
+                                'barang_id' => $value['C'],
+                                'user_id' => $value['D'],
+                                'stok_tanggal' => $stok_tanggal,
+                                'stok_jumlah' => $value['F'],
+                                'created_at' => Carbon::now(),
+                                'updated_at' => Carbon::now(),
+                            ];
                         }
                     }
+                }
 
-                    if(count($insert) > 0){
-                        // Insert data ke database, jika data sudah ada, maka diabaikan
-                        StokModel::insertOrIgnore($insert);
+                if (count($insert) > 0) {
+                    // Insert data ke database, jika data sudah ada, maka diabaikan
+                    StokModel::insertOrIgnore($insert);
 
-                        return response()->json([
-                            'status' => true,
-                            'message' => 'Data Stok berhasil diimpor'
-                        ]);
-                    } else {
-                        return response()->json([
-                            'status' => false,
-                            'message' => 'Tidak ada data stok yang valid untuk diimpor'
-                        ]);
-                    }
+                    return response()->json([
+                        'status' => true,
+                        'message' => 'Data Stok berhasil diimpor'
+                    ]);
                 } else {
                     return response()->json([
                         'status' => false,
-                        'message' => 'File kosong atau tidak ada data yang diimpor'
+                        'message' => 'Tidak ada data stok yang valid untuk diimpor'
                     ]);
                 }
-            } catch (\Exception $e) {
+            } else {
                 return response()->json([
                     'status' => false,
-                    'message' => 'Terjadi kesalahan saat mengimpor data: ' . $e->getMessage()
+                    'message' => 'File kosong atau tidak ada data yang diimpor'
                 ]);
             }
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Terjadi kesalahan saat mengimpor data: ' . $e->getMessage()
+            ]);
         }
-        return redirect('/');
     }
+    return redirect('/');
+}
+
+public function export_pdf()
+    {
+        // Fetching stok data along with supplier and barang details
+        $stokData = StokModel::with(['supplier', 'barang', 'user'])
+            ->orderBy('supplier_id')
+            ->orderBy('barang_id')
+            ->get();
+    
+        // Load the view file for generating the PDF
+        $pdf = Pdf::loadView('stok.export_pdf', ['stokData' => $stokData]);
+    
+        // Set the paper size and orientation
+        $pdf->setPaper('a4', 'portrait'); // 'portrait' orientation for A4 paper
+    
+        // Enable remote access for images
+        $pdf->setOption("isRemoteEnabled", true);
+    
+        // Render the PDF and return as a stream
+        return $pdf->stream('Data_Stok_'.date('Y-m-d_H:i:s').'.pdf');
+    }
+
+
+
+
 }

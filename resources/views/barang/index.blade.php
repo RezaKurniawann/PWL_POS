@@ -21,24 +21,22 @@
       </div> 
       <div class="card-body">
         <!-- untuk Filter Data -->
-        <div id="filter" class="form-horizontal filter-date p-2 border bottom mb-2">
-          <div class="row">
-            <div class="col-md-12">
-              <div class="form-group form-group-sm row text-sm mb-0">
-                <label for="filter_date" class="col-md-1 col-form-label">Filter</label>
-                <div class="col-md-3">
-                  <select name="kategori_id" class="form-control form-control-sm kategori_id">
-                    <option value="">- Semua -</option>
-                    @foreach ($kategori as $k)
-                      <option value="{{ $k->kategori_id }}">{{ $k->kategori_nama }}</option>
-                    @endforeach
-                  </select>
-                  <small class="form-text text-muted">Kategori Barang</small>
-                </div>
+        <div class="row">
+          <div class="col-md-12">
+              <div class="form-group row">
+                  <label class="col-1 control-label col-form-label">Filter:</label>
+                  <div class="col-3">
+                    <select name="kategori_id" class="form-control form-control-sm kategori_id">
+                      <option value="">- Semua -</option>
+                      @foreach ($kategori as $k)
+                        <option value="{{ $k->kategori_id }}">{{ $k->kategori_nama }}</option>
+                      @endforeach
+                    </select>
+                    <small class="form-text text-muted">Kategori Barang</small>
+                  </div>
               </div>
-            </div>
           </div>
-        </div>
+      </div>
         @if (session('success'))
             <div class="alert alert-success">{{ session('success') }} </div>
         @endif
