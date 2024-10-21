@@ -34,6 +34,87 @@ class BarangSeeder extends Seeder
             ['kategori_id' => 5, 'barang_kode' => 'BRG14', 'barang_nama' => 'Jus', 'harga_beli' => 5000, 'harga_jual' => 10000],
             ['kategori_id' => 5, 'barang_kode' => 'BRG15', 'barang_nama' => 'Teh', 'harga_beli' => 15000, 'harga_jual' => 25000],
 
+            [
+                'barang_id' => 16,
+                'kategori_id' => 6,
+                'barang_kode' => 'SBK-001',
+                'barang_nama' => 'Beras Cap Jago (5kg)',
+                'harga_beli' => 65000,
+                'harga_jual' => 68000
+            ],
+            [
+                'barang_id' => 17,
+                'kategori_id' => 6,
+                'barang_kode' => 'SBK-002',
+                'barang_nama' => 'Beras Bramo Cap Lele',
+                'harga_beli' => 80000,
+                'harga_jual' => 83000
+            ],
+            [
+                'barang_id' => 18,
+                'kategori_id' => 7,
+                'barang_kode' => 'SNK-001',
+                'barang_nama' => 'Happy Tos',
+                'harga_beli' => 10500,
+                'harga_jual' => 11000
+            ],
+            [
+                'barang_id' => 19,
+                'kategori_id' => 7,
+                'barang_kode' => 'SNK-002',
+                'barang_nama' => 'Oreo',
+                'harga_beli' => 7200,
+                'harga_jual' => 7800
+            ],
+            [
+                'barang_id' => 20,
+                'kategori_id' => 8,
+                'barang_kode' => 'MND-001',
+                'barang_nama' => 'Sabun Lifebouy',
+                'harga_beli' => 4250,
+                'harga_jual' => 5000
+            ],
+            [
+                'barang_id' => 21,
+                'kategori_id' => 8,
+                'barang_kode' => 'MND-002',
+                'barang_nama' => 'Pasta Gigi Pepsoden',
+                'harga_beli' => 6750,
+                'harga_jual' => 7500
+            ],
+            [
+                'barang_id' => 22,
+                'kategori_id' => 9,
+                'barang_kode' => 'BAY-001',
+                'barang_nama' => 'Susu SGM Coklat 900gr',
+                'harga_beli' => 92500,
+                'harga_jual' => 95000
+            ],
+            [
+                'barang_id' => 23,
+                'kategori_id' => 9,
+                'barang_kode' => 'BAY-002',
+                'barang_nama' => 'Popok Mamy Poko',
+                'harga_beli' => 56000,
+                'harga_jual' => 58000
+            ],
+            [
+                'barang_id' => 24,
+                'kategori_id' => 10,
+                'barang_kode' => 'MNM-001',
+                'barang_nama' => 'Aqua 600ml',
+                'harga_beli' => 3700,
+                'harga_jual' => 4500
+            ],
+            [
+                'barang_id' => 25,
+                'kategori_id' => 10,
+                'barang_kode' => 'MNM-002',
+                'barang_nama' => 'Le Mineral',
+                'harga_beli' => 3500,
+                'harga_jual' => 4000
+            ]
+
         ]); 
     }
 }

@@ -2,104 +2,106 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\Request;
 use App\Models\UserModel;
 use App\Models\LevelModel;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Symfony\Contracts\Service\Attribute\Required;
+use Yajra\DataTables\Facades\DataTables;
 use Illuminate\Support\Facades\Validator;
-use Yajra\DataTables\DataTables;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class UserController extends Controller
 {
-    public function index () {
+    // menampilkan halaman awal user
+    public function index()
+    {
         $breadcrumb = (object) [
             'title' => 'Daftar User',
-            'list' => ['Home', 'user']
+            'list' => ['Home', 'User']
         ];
 
         $page = (object) [
             'title' => 'Daftar user yang terdaftar dalam sistem'
         ];
 
-        $activeMenu = 'user'; //set menu yang sedang aktif
+        $activeMenu = 'user'; // set menu sedang active
 
         $level = LevelModel::all(); // ambil data level untuk filter level
 
-        return view('user.index', ['breadcrumb' => $breadcrumb, 'page' => $page, 'level' => $level,'activeMenu' => $activeMenu]);
+        return view('user.index', ['breadcrumb' => $breadcrumb, 'page' => $page, 'level' => $level, 'activeMenu' => $activeMenu]);
     }
 
-    // Ambil data user dalam bentuk json untuk datatables
-    public function list(Request $request) {
-        $users = UserModel::select('user_id', 'username', 'nama', 'level_id')
-            ->with('level');
+    // Ambil data user dalam bentuk JSON untuk DataTables
+    // public function list(Request $request)
+    // {
+    //     $users = UserModel::select('user_id', 'username', 'nama', 'level_id')
+    //         ->with('level');
 
-        //filter data user berdasarkan level_id
-        if ($request -> level_id) {
-            $users -> where ('level_id', $request -> level_id);
-        }
-    
-        return DataTables::of($users)
-            // menambahkan kolom index / no urut (default nama kolom: DT_RowIndex)
-            ->addIndexColumn()
-            
-            // menambahkan kolom aksi
-            ->addColumn('aksi', function ($user) {
-                // $btn = '<a href="' . url('/user/' . $user->user_id) . '" class="btn btn-info btn-sm">Detail</a> ';
-                // $btn .= '<a href="' . url('/user/' . $user->user_id . '/edit') . '" class="btn btn-warning btn-sm">Edit</a> ';
-                // $btn .= '<form class="d-inline-block" method="POST" action="' . url('/user/' . $user->user_id) . '">'
-                //     . csrf_field()
-                //     . method_field('DELETE')
-                //     . '<button type="submit" class="btn btn-danger btn-sm" onclick="return confirm(\'Apakah Anda yakin menghapus data ini?\');">Hapus</button></form>';
-                    $btn = '<button onclick="modalAction(\''.url('/user/' . $user->user_id . '/show_ajax').'\')" class="btn btn-info btn-sm">Detail</button> ';
-                    $btn .= '<button onclick="modalAction(\''.url('/user/' . $user->user_id . '/edit_ajax').'\')" class="btn btn-warning btn-sm">Edit</button> ';
-                    $btn .= '<button onclick="modalAction(\''.url('/user/' . $user->user_id . '/delete_ajax').'\')" class="btn btn-danger btn-sm">Hapus</button> ';
-                return $btn;
-            })
-        
-            // memberitahu bahwa kolom aksi adalah HTML
-            ->rawColumns(['aksi'])
-            ->make(true);
-    }
+    //     // Filter data user berdasarkan level_id
+    //     if ($request->level_id) {
+    //         $users->where('level_id', $request->level_id);
+    //     }
 
-    public function create () {
+    //     return DataTables::of($users)
+    //         // menambahkan kolom index / no urut (default nama kolom: DT_RowIndex)
+    //         ->addIndexColumn()
+    //         ->addColumn('aksi', function ($user) { // menambahkan kolom aksi
+    //             $btn = '<a href="' . url('/user/' . $user->user_id) . '" class="btn btn-info btn-sm">Detail</a> ';
+    //             $btn .= '<a href="' . url('/user/' . $user->user_id . '/edit') . '" class="btn btn-warning btn-sm">Edit</a> ';
+    //             $btn .= '<form class="d-inline-block" method="POST" action="' .
+    //                 url('/user/' . $user->user_id) . '">'
+    //                 . csrf_field() . method_field('DELETE') .
+    //                 '<button type="submit" class="btn btn-danger btn-sm" onclick="return confirm(\'Apakah Anda yakit menghapus data ini?\');">Hapus</button></form>';
+    //             return $btn;
+    //         })
+    //         ->rawColumns(['aksi']) // memberitahu bahwa kolom aksi adalah html
+    //         ->make(true);
+    // }
+
+    // Menampilkan halaman form tambah user
+    public function create()
+    {
         $breadcrumb = (object) [
             'title' => 'Tambah User',
             'list' => ['Home', 'User', 'Tambah']
         ];
-
         $page = (object) [
             'title' => 'Tambah user baru'
+
         ];
 
-        $level = LevelModel::all(); //ambil data level untuk ditampilkan di form
-        $activeMenu = 'user'; //set menu yang sedang aktif
+        $level = LevelModel::all(); // ambil data level untuk ditampilkan di form
+        $activeMenu = 'user'; // set menu yang sedang aktif
 
-        return view ('user.create', ['breadcrumb' => $breadcrumb, 'page' => $page, 'level' => $level, 'activeMenu' => $activeMenu]);
-
+        return view('user.create', ['breadcrumb' => $breadcrumb, 'page' => $page, 'level' => $level, 'activeMenu' => $activeMenu]);
     }
 
-    public function store (Request $request) {
-        $request -> validate([
-            //username harus diisi berupa string, minimal 3 karakter, dan bernilai unik di tabel m_user kolom username
+    //Menyimpan data user baru
+    public function store(Request $request)
+    {
+        $request->validate([
+            //username harus diisi berupa string minimal 3 karakter dan bernilai unik di tabel m_user kolom username
             'username' => 'required|string|min:3|unique:m_user,username',
-            'nama' => 'required|string|max:100', // nama harus diisi, berupa string, dan maksimal 100 karakter
-            'password' => 'required|min:5',
+            'nama' => 'required|string|max:100',
+            'password' => 'required|string|min:5',
             'level_id' => 'required|integer'
         ]);
 
-        UserModel::create ([
-            'username' => $request -> username,
-            'nama' => $request -> nama,
-            'password' => bcrypt($request->password), //password dienkripsi sebelum disimpan
-            'level_id' => $request -> level_id
+        UserModel::create([
+            'username' => $request->username,
+            'nama' => $request->nama,
+            'password' => bcrypt($request->password),
+            'level_id' => $request->level_id
         ]);
-
-        return redirect('/user') -> with('success', 'Data user berhasil disimpan');
+        return redirect('/user')->with('success', 'Data user berhasil disimpan');
     }
 
-    public function show (string $id) {
-        $user = UserModel::with('level') -> find($id);
+    //Menampilkan detail user 
+    public function show(string $id)
+    {
+        $user = UserModel::with('level')->find($id);
 
         $breadcrumb = (object) [
             'title' => 'Detail User',
@@ -107,16 +109,18 @@ class UserController extends Controller
         ];
 
         $page = (object) [
-            'title' => 'Detail User'
+            'title' => 'Detail user',
         ];
 
-        $activeMenu = 'user'; // set menu yang sedang aktif
+        $activeMenu = 'user'; //set menu yang sedang aktif
 
-        return view('user.show', ['breadcrumb' => $breadcrumb, 'page'=> $page, 'user' => $user, 'activeMenu' => $activeMenu]);
+        return view('user.show', ['breadcrumb' =>  $breadcrumb, 'page' => $page, 'user' => $user, 'activeMenu' => $activeMenu]);
     }
 
-    public function edit (string $id) {
-        $user = UserModel::find ($id);
+    //Menampilkan halaman form edit user
+    public function edit(string $id)
+    {
+        $user = UserModel::find($id);
         $level = LevelModel::all();
 
         $breadcrumb = (object) [
@@ -125,80 +129,79 @@ class UserController extends Controller
         ];
 
         $page = (object) [
-            'title' => 'Edit User'
+            'title' => 'Edit user'
         ];
 
-        $activeMenu = 'user'; // set menu yang sedang aktif
+        $activeMenu = 'user'; //set menu yang aktif
 
-        return view ('user.edit', ['breadcrumb' => $breadcrumb, 'page' => $page, 'user' => $user, 'level' => $level, 'activeMenu' => $activeMenu]);
+        return view('user.edit', ['breadcrumb' => $breadcrumb, 'page' => $page, 'user' => $user, 'level' => $level, 'activeMenu' => $activeMenu]);
     }
 
-    public function update (Request $request, string $id) {
-        $request -> validate([
-            //username harus diisi, berupa string, minimal 3 karakter,
-            // dan bernilai unik di tabel m_user kolom username kecuali untuk user dengan id uang sedang diedit
-            'username' => 'required|string|min:3|unique:m_user,username,' . $id . ',user_id',
-            'nama' => 'required|string|max:100', // nama harus diisi berupa string dan maksimal 100 karakter
-            'password' => 'nullable|min:5', // password bisa diisi minimal 5 karakter dan bisa tidak diisi
-            'level_id' => 'required|integer'    // level_id harus diisi dan berupa angka
+    //Menyimpan perubahan data user
+    public function update(Request $request, string $id)
+    {
+        $request->validate([
+            // username harus diisi, berupa string, minimal 3 karakter,
+            // dan bernilai unik di tabel m_user kolom username kecuali untuk user dengan id yang sedang diedit
+            'username'  => 'required|string|min:3|unique:m_user,username,' . $id . ',user_id',
+            'nama'      => 'required|string|max:100',
+            'password'  => 'nullable|min:5',
+            'level_id'  => 'required|integer',
         ]);
-
-        UserModel::find($id) -> update ([
-            'username' => $request -> username,
+        UserModel::find($id)->update([
+            'username' => $request->username,
             'nama' => $request->nama,
-            'password' => $request -> password ? bcrypt($request -> password) : UserModel::find($id) -> password,
-            'level_id' => $request -> level_id
+            'password' => $request->password ? bcrypt($request->password) : UserModel::find($id)->password,
+            'level_id' => $request->level_id
         ]);
+        return redirect('/user')->with('success', 'Data user berhasil diubah');
+    }
 
-        return redirect('/user') -> with('success', 'Data user berhasil diubah');
-    } 
-
-    public function destroy (string $id) {
-        $check = UserModel::find ($id);
-
-        if (!$check) {  // untuk mengecek apakah data user dengan id yang dimaksud ada atau tidak
-            return redirect('/user') -> with ('error', 'Data user tidak ditemukan');
+    //Menghapus data user
+    public function destroy(string $id)
+    {
+        $user = UserModel::find($id); // Cari data user berdasarkan ID
+        if (!$user) {
+            return redirect('/user')->with('error', 'Data user tidak ditemukan');
         }
-
         try {
-            UserModel::destroy($id); // hapus data level
+            UserModel::destroy($id); //Hapus data level
 
-            return redirect('/user') -> with('success', 'Data user berhasil dihapus');
+            return redirect('/user')->with('success', 'Data user berhasil dihapus');
         } catch (\Illuminate\Database\QueryException $e) {
-
-            //jika terjadi error ketika menghapus data, redirect kembali ke halaman dengan membwa pesan error
-            return redirect('/user') -> with('error', 'Data user gagal dihapus karena masih terdapat tabel lain yang terkait dengan data ini');
+            return redirect('/user')->with('error', 'Data user gagal dihapus karena masih terdapat tabel lain yang terkait dengan data ini');
         }
     }
 
+    // P6 P1 (membuat user ajax)
     public function create_ajax()
     {
         $level = LevelModel::select('level_id', 'level_nama')->get();
 
         return view('user.create_ajax')
-                    ->with('level', $level);
+            ->with('level', $level);
     }
 
-    public function store_ajax(Request $request){
-        //periksa bila request berupa AJAX atau tidak
-        if($request->ajax() || $request->wantsJson()){
+    public function store_ajax(Request $request)
+    {
+        // cek apakah request berupa ajax
+        if ($request->ajax() || $request->wantsJson()) {
             $rules = [
                 'level_id'  => 'required|integer',
                 'username'  => 'required|string|min:3|unique:m_user,username',
                 'nama'      => 'required|string|max:100',
-                'password'  => 'required|min:6'
+                'password'  => 'required|min:5'
             ];
-
+            // use Illuminate\Support\Facades\Validator;
             $validator = Validator::make($request->all(), $rules);
 
-            if($validator->fails()){
+            if ($validator->fails()) {
                 return response()->json([
-                    'status'    =>false,    //response status, false: eror/gagal, true:berhasil
+                    'status'    => false, // response status, false: error/gagal, true: berhasil
                     'message'   => 'Validasi Gagal',
-                    'msgField'  => $validator->errors(),    //pesan eror validasi
+                    'msgField'  => $validator->errors(), // pesan error validasi
                 ]);
             }
-
             UserModel::create($request->all());
             return response()->json([
                 'status'    => true,
@@ -208,6 +211,31 @@ class UserController extends Controller
         redirect('/');
     }
 
+    // Ambil data user dalam bentuk json untuk datatables 
+    public function list(Request $request)
+    {
+        $users = UserModel::select('user_id', 'username', 'nama', 'level_id')
+            ->with('level');
+        // Filter data user berdasarkan level_id
+        if ($request->level_id) {
+            $users->where('level_id', $request->level_id);
+        }
+        return DataTables::of($users)
+            ->addIndexColumn() // menambahkan kolom index / no urut (default nama kolom:DT_RowIndex) 
+            ->addColumn('aksi', function ($user) { // menambahkan kolom aksi
+                $btn = '<button onclick="modalAction(\'' . url('/user/' . $user->user_id .
+                    '/show_ajax') . '\')" class="btn btn-info btn-sm">Detail</button> ';
+                $btn .= '<button onclick="modalAction(\'' . url('/user/' . $user->user_id .
+                    '/edit_ajax') . '\')" class="btn btn-warning btn-sm">Edit</button> ';
+                $btn .= '<button onclick="modalAction(\'' . url('/user/' . $user->user_id .
+                    '/delete_ajax') . '\')" class="btn btn-danger btn-sm">Hapus</button> ';
+                return $btn;
+            })
+            ->rawColumns(['aksi']) // memberitahu bahwa kolom aksi adalah html 
+            ->make(true);
+    }
+
+    // Menampilkan halaman form edit user ajax
     public function edit_ajax(string $id)
     {
         $user = UserModel::find($id);
@@ -216,20 +244,18 @@ class UserController extends Controller
         return view('user.edit_ajax', ['user' => $user, 'level' => $level]);
     }
 
-    //Menyimpan perubahan data user AJAX
-    public function update_ajax(Request $request, $id){
-        //periksa bila request dari ajax atau bukan
-        if($request->ajax() || $request->wantsJson()) {
+    public function update_ajax(Request $request, $id)
+    {
+        // cek apakah request dari ajax
+        if ($request->ajax() || $request->wantsJson()) {
             $rules = [
                 'level_id' => 'required|integer',
-                'username' => 'required|max:20|unique:m_user,username,'.$id.',user_id',
+                'username' => 'required|max:20|unique:m_user,username,' . $id . ',user_id',
                 'nama' => 'required|max:100',
-                'password' => 'nullable|min:6|max:20'
+                'password' => 'nullable||max:20'
             ];
-
-            // use Illuminate\Support\Facades\Validator
+            // use Illuminate\Support\Facades\Validator;
             $validator = Validator::make($request->all(), $rules);
-            
             if ($validator->fails()) {
                 return response()->json([
                     'status' => false, // respon json, true: berhasil, false: gagal
@@ -237,19 +263,17 @@ class UserController extends Controller
                     'msgField' => $validator->errors() // menunjukkan field mana yang error
                 ]);
             }
-
             $check = UserModel::find($id);
             if ($check) {
-                if(!$request->filled('password') ){ // jika password tidak diisi, maka hapus dari request
+                if (!$request->filled('password')) { // jika password tidak diisi, maka hapus dari request
                     $request->request->remove('password');
                 }
-
                 $check->update($request->all());
                 return response()->json([
                     'status' => true,
                     'message' => 'Data berhasil diupdate'
                 ]);
-            } else{
+            } else {
                 return response()->json([
                     'status' => false,
                     'message' => 'Data tidak ditemukan'
@@ -259,222 +283,111 @@ class UserController extends Controller
         return redirect('/');
     }
 
-    public function confirm_ajax(string $id){
+    public function confirm_ajax(string $id)
+    {
         $user = UserModel::find($id);
-
         return view('user.confirm_ajax', ['user' => $user]);
     }
 
-    //Menghapus data user AJAX
     public function delete_ajax(Request $request, $id)
     {
-        //cek apakah request dari AJAX
-        if ($request->ajax() || $request->wantsJson()){
+        // cek apakah request dari ajax
+        if ($request->ajax() || $request->wantsJson()) {
             $user = UserModel::find($id);
             if ($user) {
                 $user->delete();
                 return response()->json([
-                    'status'    => true,
-                    'message'   => 'Data berhasil dihapus'
+                    'status' => true,
+                    'message' => 'Data berhasil dihapus'
                 ]);
             } else {
                 return response()->json([
-                    'status'    => false,
-                    'message'   => 'Data tidak ditemukan'
+                    'status' => false,
+                    'message' => 'Data tidak ditemukan'
                 ]);
             }
         }
         return redirect('/');
     }
-    // public function index () {
-    //     $user = UserModel::with('level') -> get ();
-    //     return view ('user', ['data' => $user]);
-    // }
-    
-    // public function index () {
-    //     $user = UserModel::all();
-    //     return view ('user', ['data' => $user]);
 
-    // }
+    public function import()
+    {
+        return view('user.import');
+    }
 
-    // public function tambah () {
-    //     return view('user_tambah');
-    // }
-
-    // public function tambah_simpan (Request $request) {
-    //     UserModel::create([
-    //         'username' => $request -> username,
-    //         'nama' => $request -> nama,
-    //         'password' => Hash ::make('$request->password'),
-    //         'level_id' => $request -> level_id
-
-    //     ]);
-
-    //     return redirect('/user');
-    // }
-
-    // public function ubah ($id) {
-    //     $user = UserModel::find($id);
-    //     return view ('user_ubah', ['data' => $user]);
-    // }
-
-    // public function ubah_simpan ($id, Request $request) {
-    //     $user = UserModel::find($id);
-    //     $user -> username = $request -> username;
-    //     $user -> nama = $request -> nama;
-    //     $user -> password = Hash ::make('$request->password');
-    //     $user -> level_id = $request -> level_id;
-
-    //     $user -> save();
-
-    //     return redirect('/user');
-
-    // }
-
-    // public function hapus ($id) {
-    //     $user = UserModel::find($id);
-    //     $user -> delete();
-
-    //     return redirect('/user');
-    // }
-
-    // public function index () {
-    //     $user = UserModel::create ([
-    //         'username' => 'manager11',
-    //         'nama' => 'Manager11',
-    //         'password' => Hash::make ('12345'),
-    //         'level_id' => 2
-    //     ]);
-
-    //     $user -> username = 'manager12';
-
-    //     $user -> save ();
-
-    //     $user -> wasChanged(); //true
-    //     $user -> wasChanged('username'); //true
-    //     $user -> wasChanged(['username', 'level_id']); //true
-    //     $user -> wasChanged ('nama'); //false
-    //     dd ($user -> wasChanged (['nama', 'username'])); //true
-    // }
-
-    // public function index () {
-    //     $user = UserModel::create([
-    //         'username' => 'manager55',
-    //         'nama' => 'Manager55',
-    //         'password' => Hash::make ('12345'),
-    //         'level_id' => 2
-    //     ]);
-    //     $user -> username = 'manager56';
-
-    //     $user -> isDirty(); //true
-    //     $user -> isDirty('username'); //true
-    //     $user -> isDirty('nama'); //false
-    //     $user -> isDirty(['nama', 'username']); //true
-
-    //     $user -> isClean(); //false
-    //     $user -> isClean('username'); //false
-    //     $user -> isClean('nama'); //true
-    //     $user -> isClean(['nama', 'username']); //false
-
-    //     $user -> save ();
-
-    //     $user -> isDirty (); //false
-    //     $user -> isClean (); //true
-    //     dd ($user -> isDirty ());
-    // }
-
-    // public function index () {
-    //     $user = UserModel::firstOrNew (
-    //         [
-    //             'username' => 'manager33',
-    //             'nama' => 'Manager Tiga Tiga',
-    //             'password' => Hash::make ('12345'),
-    //             'level_id' => 2
-    //         ]);
-    //         $user -> save ();
-    //     return view ('user', ['data' => $user]);
-    // } 
-    
-    // public function index () {
-    //     $user = UserModel::firstOrNew ( 
-    //     [
-    //         'username' => 'manager',
-    //         'nama' => 'Manager',
-    //     ]);
-    //     return view ('user', ['data' => $user]);
-    // }
-    
-    // public function index () {
-    //     $user = UserModel::firstOrCreate(
-    //         [
-    //             'username' => 'manager22',
-    //             'nama' => 'Manager Dua Dua',
-    //             'password' => Hash::make ('12345'),
-    //             'level_id' => 2
-    //         ],
-    //     );
-    //     return view ('user', ['data' => $user]);
-    // }
-    
-    // public function index () {
-    //     $user = UserModel::firstOrCreate(
-    //         [
-    //             'username' => 'manager',
-    //             'nama' => 'Manager',
-    //         ]
-    //     );
-    //     return view('user', ['data' => $user]);
-    // }
-
-    // public function index () {
-    //     $user = UserModel::where('level_id', 2) -> count ();
-    //     return view('user', ['data' => $user]);
-        
-    // }
-
-    // public function index () {
-    //     $user = UserModel::where('username', 'manager9') -> firstOrFail ();
-    //     return view('user', ['data' => $user]);
-
-    // }
-
-    // public function index () {
-    //     $user = UserModel::findOrFail(20);
-    //     return view('user', ['data' => $user]);
-
-    // }
-
-    // public function index () {
-    //     $user = UserModel::findOr(20, ['username', 'nama'], function () {
-    //         abort(404);
-    //     });
-    //     return view('user', ['data' => $user]);
-    // }
-
-    // public function index () {
-    //     $user = UserModel::firstWhere('level_id', 1);
-    //     return view('user', ['data' => $user]);
-    // }
-
-    // public function index () {
-    //     $user = UserModel::where('level_id', 1) -> first ();
-    //     return view('user', ['data' => $user]);
-    // }
-
-    // public function index () {
-    //     //tambah data user dengan Eloquent model
-    //     $data = [
-    //         'level_id' => 2,
-    //         'username' => 'manager_tiga',
-    //         'nama' => 'Manager 3',
-    //         'password' => Hash::make('12345')
+    public function import_ajax(Request $request)
+    {
+        if($request->ajax() || $request->wantsJson()){
+            // Validasi file harus berformat xlsx dan maksimal ukuran 1MB
+            $rules = [
+                'file_user' => ['required', 'mimes:xlsx', 'max:1024']
+            ];
+            $validator = Validator::make($request->all(), $rules);
             
-    //     ];
-    //     // UserModel::insert($data); //tambahkan data ke tabel m_user
-    //     // UserModel::where ('username', 'customer - 1') -> update ($data);
-    //     UserModel::create($data);
+            if($validator->fails()){
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Validasi Gagal',
+                    'msgField' => $validator->errors()
+                ]);
+            }
 
-    //     $user = UserModel::all();
-    //     return view ('user', ['data' => $user]);
-    // }
+            try {
+                // Ambil file dari request
+                $file = $request->file('file_user'); 
+                $reader = IOFactory::createReader('Xlsx'); // Load reader file Excel
+                $reader->setReadDataOnly(true); // Hanya membaca data
+                $spreadsheet = $reader->load($file->getRealPath()); // Load file excel
+                $sheet = $spreadsheet->getActiveSheet(); // Ambil sheet yang aktif
+                $data = $sheet->toArray(null, false, true, true); // Ambil data Excel
+
+                // Siapkan array untuk menampung data yang akan diinsert
+                $insert = [];
+                
+                if(count($data) > 1){ // Jika data lebih dari 1 baris
+                    foreach ($data as $baris => $value) {
+                        if($baris > 1){ // Baris ke-1 adalah header, maka lewati
+                            // Pastikan semua kolom tidak kosong sebelum insert
+                            if ($value['A'] && $value['B'] && $value['C'] && $value['D'] && $value['E']) {
+                                $insert[] = [
+                                    'user_id' => $value['A'],
+                                    'level_id' => $value['B'],
+                                    'username' => $value['C'],
+                                    'nama' => $value['D'],
+                                    'password' => $value['E'],
+                                    'created_at' => now(),
+                                ];
+                            }
+                        }
+                    }
+
+                    if(count($insert) > 0){
+                        // Insert data ke database, jika data sudah ada, maka diabaikan
+                        UserModel::insertOrIgnore($insert);
+
+                        return response()->json([
+                            'status' => true,
+                            'message' => 'Data user berhasil diimpor'
+                        ]);
+                    } else {
+                        return response()->json([
+                            'status' => false,
+                            'message' => 'Tidak ada data user yang valid untuk diimpor'
+                        ]);
+                    }
+                } else {
+                    return response()->json([
+                        'status' => false,
+                        'message' => 'File kosong atau tidak ada data yang diimpor'
+                    ]);
+                }
+            } catch (\Exception $e) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Terjadi kesalahan saat mengimpor data: ' . $e->getMessage()
+                ]);
+            }
+        }
+        return redirect('/');
+    }
 }
