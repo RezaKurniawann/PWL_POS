@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use App\Models\UserModel;
+use Illuminate\Support\Facades\Storage;
 
 class RegisterController extends Controller
 {
@@ -16,12 +17,20 @@ class RegisterController extends Controller
             'username' => 'required',
             'nama' => 'required',
             'password' => 'required|min:5|confirmed',
-            'level_id' => 'required'
-        ]); 
+            'level_id' => 'required',
+            'image' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048'
+        ]);
 
         // if validation fails
         if ($validator->fails()) {
             return response()->json($validator->errors(), 422);
+        }
+
+        // store the image and get its name
+        if ($request->hasFile('image')) {
+            $image = $request->file('image');
+            $image->store('public/images'); // Store in 'public/images' directory
+            $imageName = $image->hashName();
         }
 
         // create user
@@ -29,7 +38,8 @@ class RegisterController extends Controller
             'username' => $request->username,
             'nama' => $request->nama,
             'password' => bcrypt($request->password),
-            'level_id' => $request->level_id, 
+            'level_id' => $request->level_id,
+            'image' => $imageName,
         ]);
 
         // return response JSON if user is created
@@ -46,3 +56,5 @@ class RegisterController extends Controller
         ], 409);
     }
 }
+
+
